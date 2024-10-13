@@ -5,21 +5,21 @@ import async_timeout
 import pytest
 
 from asgiref.sync import async_to_sync
-from channels_valkey.core import ChannelFull, RedisChannelLayer
+from channels_valkey.core import ChannelFull, ValkeyChannelLayer
 
-TEST_HOSTS = ["redis://localhost:6379"]
+TEST_HOSTS = ["valkey://localhost:6379"]
 
 MULTIPLE_TEST_HOSTS = [
-    "redis://localhost:6379/0",
-    "redis://localhost:6379/1",
-    "redis://localhost:6379/2",
-    "redis://localhost:6379/3",
-    "redis://localhost:6379/4",
-    "redis://localhost:6379/5",
-    "redis://localhost:6379/6",
-    "redis://localhost:6379/7",
-    "redis://localhost:6379/8",
-    "redis://localhost:6379/9",
+    "valkey://localhost:6379/0",
+    "valkey://localhost:6379/1",
+    "valkey://localhost:6379/2",
+    "valkey://localhost:6379/3",
+    "valkey://localhost:6379/4",
+    "valkey://localhost:6379/5",
+    "valkey://localhost:6379/6",
+    "valkey://localhost:6379/7",
+    "valkey://localhost:6379/8",
+    "valkey://localhost:6379/9",
 ]
 
 
@@ -58,7 +58,7 @@ async def channel_layer():
     """
     Channel layer fixture that flushes automatically.
     """
-    channel_layer = RedisChannelLayer(
+    channel_layer = ValkeyChannelLayer(
         hosts=TEST_HOSTS, capacity=3, channel_capacity={"tiny": 1}
     )
     yield channel_layer
@@ -70,7 +70,7 @@ async def channel_layer_multiple_hosts():
     """
     Channel layer fixture that flushes automatically.
     """
-    channel_layer = RedisChannelLayer(hosts=MULTIPLE_TEST_HOSTS, capacity=3)
+    channel_layer = ValkeyChannelLayer(hosts=MULTIPLE_TEST_HOSTS, capacity=3)
     yield channel_layer
     await channel_layer.flush()
 
@@ -94,9 +94,9 @@ def test_double_receive(channel_layer):
     Makes sure we can receive from two different event loops using
     process-local channel names.
     """
-    channel_layer = RedisChannelLayer(hosts=TEST_HOSTS, capacity=3)
+    channel_layer = ValkeyChannelLayer(hosts=TEST_HOSTS, capacity=3)
 
-    # Aioredis connections can't be used from different event loops, so
+    # Aiovalkey connections can't be used from different event loops, so
     # send and close need to be done in the same async_to_sync call.
     async def send_and_close(*args, **kwargs):
         await channel_layer.send(*args, **kwargs)
@@ -142,7 +142,7 @@ async def test_send_specific_capacity(channel_layer):
     """
     Makes sure we get ChannelFull when we hit the send capacity on a specific channel
     """
-    custom_channel_layer = RedisChannelLayer(
+    custom_channel_layer = ValkeyChannelLayer(
         hosts=TEST_HOSTS, capacity=3, channel_capacity={"one": 1}
     )
     await custom_channel_layer.send("one", {"type": "test.message"})
@@ -170,7 +170,7 @@ async def test_multi_send_receive(channel_layer):
     """
     Tests overlapping sends and receives, and ordering.
     """
-    channel_layer = RedisChannelLayer(hosts=TEST_HOSTS)
+    channel_layer = ValkeyChannelLayer(hosts=TEST_HOSTS)
     await channel_layer.send("test-channel-3", {"type": "message.1"})
     await channel_layer.send("test-channel-3", {"type": "message.2"})
     await channel_layer.send("test-channel-3", {"type": "message.3"})
@@ -205,7 +205,7 @@ async def test_groups_basic(channel_layer):
     """
     Tests basic group operation.
     """
-    channel_layer = RedisChannelLayer(hosts=TEST_HOSTS)
+    channel_layer = ValkeyChannelLayer(hosts=TEST_HOSTS)
     channel_name1 = await channel_layer.new_channel(prefix="test-gr-chan-1")
     channel_name2 = await channel_layer.new_channel(prefix="test-gr-chan-2")
     channel_name3 = await channel_layer.new_channel(prefix="test-gr-chan-3")
@@ -230,7 +230,7 @@ async def test_groups_channel_full(channel_layer):
     """
     Tests that group_send ignores ChannelFull
     """
-    channel_layer = RedisChannelLayer(hosts=TEST_HOSTS)
+    channel_layer = ValkeyChannelLayer(hosts=TEST_HOSTS)
     await channel_layer.group_add("test-group", "test-gr-chan-1")
     await channel_layer.group_send("test-group", {"type": "message.1"})
     await channel_layer.group_send("test-group", {"type": "message.1"})
@@ -245,7 +245,7 @@ async def test_groups_multiple_hosts(channel_layer_multiple_hosts):
     """
     Tests advanced group operation with multiple hosts.
     """
-    channel_layer = RedisChannelLayer(hosts=MULTIPLE_TEST_HOSTS, capacity=100)
+    channel_layer = ValkeyChannelLayer(hosts=MULTIPLE_TEST_HOSTS, capacity=100)
     channel_name1 = await channel_layer.new_channel(prefix="channel1")
     channel_name2 = await channel_layer.new_channel(prefix="channel2")
     channel_name3 = await channel_layer.new_channel(prefix="channel3")
@@ -273,7 +273,7 @@ async def test_groups_same_prefix(channel_layer):
     """
     Tests group_send with multiple channels with same channel prefix
     """
-    channel_layer = RedisChannelLayer(hosts=TEST_HOSTS)
+    channel_layer = ValkeyChannelLayer(hosts=TEST_HOSTS)
     channel_name1 = await channel_layer.new_channel(prefix="test-gr-chan")
     channel_name2 = await channel_layer.new_channel(prefix="test-gr-chan")
     channel_name3 = await channel_layer.new_channel(prefix="test-gr-chan")
@@ -307,7 +307,7 @@ async def test_groups_multiple_hosts_performance(
     Tests advanced group operation: can send efficiently to multiple channels
     with multiple hosts within a certain timeout
     """
-    channel_layer = RedisChannelLayer(hosts=MULTIPLE_TEST_HOSTS, capacity=100)
+    channel_layer = ValkeyChannelLayer(hosts=MULTIPLE_TEST_HOSTS, capacity=100)
 
     channels = []
     for i in range(0, num_channels):
@@ -406,7 +406,7 @@ def test_repeated_group_send_with_async_to_sync(channel_layer):
     Makes sure repeated group_send calls wrapped in async_to_sync
     process-local channel names.
     """
-    channel_layer = RedisChannelLayer(hosts=TEST_HOSTS, capacity=3)
+    channel_layer = ValkeyChannelLayer(hosts=TEST_HOSTS, capacity=3)
 
     try:
         async_to_sync(channel_layer.group_send)(
@@ -421,7 +421,7 @@ def test_repeated_group_send_with_async_to_sync(channel_layer):
 
 @pytest.mark.xfail(
     reason="""
-Fails with error in redis-py: int() argument must be a string, a bytes-like
+Fails with error in valkey-py: int() argument must be a string, a bytes-like
 object or a real number, not 'NoneType'. Refs: #348
 """
 )
@@ -430,7 +430,7 @@ async def test_receive_cancel(channel_layer):
     """
     Makes sure we can cancel a receive without blocking
     """
-    channel_layer = RedisChannelLayer(capacity=30)
+    channel_layer = ValkeyChannelLayer(capacity=30)
     channel = await channel_layer.new_channel()
     delay = 0
     while delay < 0.01:
@@ -453,7 +453,7 @@ async def test_random_reset__channel_name(channel_layer):
     Makes sure resetting random seed does not make us reuse channel names.
     """
 
-    channel_layer = RedisChannelLayer()
+    channel_layer = ValkeyChannelLayer()
     random.seed(1)
     channel_name_1 = await channel_layer.new_channel()
     random.seed(1)
@@ -469,9 +469,9 @@ async def test_random_reset__client_prefix(channel_layer):
     """
 
     random.seed(1)
-    channel_layer_1 = RedisChannelLayer()
+    channel_layer_1 = ValkeyChannelLayer()
     random.seed(1)
-    channel_layer_2 = RedisChannelLayer()
+    channel_layer_2 = ValkeyChannelLayer()
     assert channel_layer_1.client_prefix != channel_layer_2.client_prefix
 
 
@@ -479,7 +479,7 @@ async def test_random_reset__client_prefix(channel_layer):
 async def test_message_expiry__earliest_message_expires(channel_layer):
     expiry = 3
     delay = 2
-    channel_layer = RedisChannelLayer(expiry=expiry)
+    channel_layer = ValkeyChannelLayer(expiry=expiry)
     channel_name = await channel_layer.new_channel()
 
     task = asyncio.ensure_future(
@@ -506,7 +506,7 @@ async def test_message_expiry__earliest_message_expires(channel_layer):
 async def test_message_expiry__all_messages_under_expiration_time(channel_layer):
     expiry = 3
     delay = 1
-    channel_layer = RedisChannelLayer(expiry=expiry)
+    channel_layer = ValkeyChannelLayer(expiry=expiry)
     channel_name = await channel_layer.new_channel()
 
     task = asyncio.ensure_future(
@@ -532,7 +532,7 @@ async def test_message_expiry__all_messages_under_expiration_time(channel_layer)
 async def test_message_expiry__group_send(channel_layer):
     expiry = 3
     delay = 2
-    channel_layer = RedisChannelLayer(expiry=expiry)
+    channel_layer = ValkeyChannelLayer(expiry=expiry)
     channel_name = await channel_layer.new_channel()
 
     await channel_layer.group_add("test-group", channel_name)
@@ -563,7 +563,7 @@ async def test_message_expiry__group_send__one_channel_expires_message(channel_l
     expiry = 3
     delay = 1
 
-    channel_layer = RedisChannelLayer(expiry=expiry)
+    channel_layer = ValkeyChannelLayer(expiry=expiry)
     channel_1 = await channel_layer.new_channel()
     channel_2 = await channel_layer.new_channel(prefix="channel_2")
 
@@ -613,19 +613,19 @@ async def test_message_expiry__group_send__one_channel_expires_message(channel_l
 
 
 def test_default_group_key_format():
-    channel_layer = RedisChannelLayer()
+    channel_layer = ValkeyChannelLayer()
     group_name = channel_layer._group_key("test_group")
     assert group_name == b"asgi:group:test_group"
 
 
 def test_custom_group_key_format():
-    channel_layer = RedisChannelLayer(prefix="test_prefix")
+    channel_layer = ValkeyChannelLayer(prefix="test_prefix")
     group_name = channel_layer._group_key("test_group")
     assert group_name == b"test_prefix:group:test_group"
 
 
 def test_receive_buffer_respects_capacity():
-    channel_layer = RedisChannelLayer()
+    channel_layer = ValkeyChannelLayer()
     buff = channel_layer.receive_buffer["test-group"]
     for i in range(10000):
         buff.put_nowait(i)
@@ -643,7 +643,7 @@ def test_serialize():
     Test default serialization method
     """
     message = {"a": True, "b": None, "c": {"d": []}}
-    channel_layer = RedisChannelLayer()
+    channel_layer = ValkeyChannelLayer()
     serialized = channel_layer.serialize(message)
     assert isinstance(serialized, bytes)
     assert serialized[12:] == b"\x83\xa1a\xc3\xa1b\xc0\xa1c\x81\xa1d\x90"
@@ -654,7 +654,7 @@ def test_deserialize():
     Test default deserialization method
     """
     message = b"Q\x0c\xbb?Q\xbc\xe3|D\xfd9\x00\x83\xa1a\xc3\xa1b\xc0\xa1c\x81\xa1d\x90"
-    channel_layer = RedisChannelLayer()
+    channel_layer = ValkeyChannelLayer()
     deserialized = channel_layer.deserialize(message)
 
     assert isinstance(deserialized, dict)

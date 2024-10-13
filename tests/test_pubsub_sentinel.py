@@ -5,11 +5,11 @@ import async_timeout
 import pytest
 
 from asgiref.sync import async_to_sync
-from channels_valkey.pubsub import RedisPubSubChannelLayer
-from channels_valkey.utils import _close_redis
+from channels_valkey.pubsub import ValkeyPubSubChannelLayer
+from channels_valkey.utils import _close_valkey
 
 SENTINEL_MASTER = "sentinel"
-SENTINEL_KWARGS = {"password": "channels_redis"}
+SENTINEL_KWARGS = {"password": "channels_valkey"}
 TEST_HOSTS = [
     {
         "sentinels": [("localhost", 26379)],
@@ -24,7 +24,7 @@ async def channel_layer():
     """
     Channel layer fixture that flushes automatically.
     """
-    channel_layer = RedisPubSubChannelLayer(hosts=TEST_HOSTS)
+    channel_layer = ValkeyPubSubChannelLayer(hosts=TEST_HOSTS)
     yield channel_layer
     async with async_timeout.timeout(1):
         await channel_layer.flush()
@@ -137,9 +137,9 @@ async def test_random_reset__channel_name(channel_layer):
 
 @pytest.mark.asyncio
 async def test_loop_instance_channel_layer_reference(channel_layer):
-    redis_pub_sub_loop_layer = channel_layer._get_layer()
+    valkey_pub_sub_loop_layer = channel_layer._get_layer()
 
-    assert redis_pub_sub_loop_layer.channel_layer == channel_layer
+    assert valkey_pub_sub_loop_layer.channel_layer == channel_layer
 
 
 def test_serialize(channel_layer):
@@ -182,17 +182,17 @@ async def test_receive_hang(channel_layer):
 @pytest.mark.asyncio
 async def test_auto_reconnect(channel_layer):
     """
-    Tests redis-py reconnect and resubscribe
+    Tests valkey-py reconnect and resubscribe
     """
     channel_name1 = await channel_layer.new_channel(prefix="test-gr-chan-1")
     channel_name2 = await channel_layer.new_channel(prefix="test-gr-chan-2")
     channel_name3 = await channel_layer.new_channel(prefix="test-gr-chan-3")
     await channel_layer.group_add("test-group", channel_name1)
     await channel_layer.group_add("test-group", channel_name2)
-    await _close_redis(channel_layer._shards[0]._redis)
+    await _close_valkey(channel_layer._shards[0]._valkey)
     await channel_layer.group_add("test-group", channel_name3)
     await channel_layer.group_discard("test-group", channel_name2)
-    await _close_redis(channel_layer._shards[0]._redis)
+    await _close_valkey(channel_layer._shards[0]._valkey)
     await asyncio.sleep(1)
     await channel_layer.group_send("test-group", {"type": "message.1"})
     # Make sure we get the message on the two channels that were in
