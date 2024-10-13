@@ -8,7 +8,7 @@ from asgiref.sync import async_to_sync
 from channels_valkey.pubsub import ValkeyPubSubChannelLayer
 from channels_valkey.utils import _close_valkey
 
-SENTINEL_MASTER = "sentinel"
+SENTINEL_MASTER = "mymaster"
 SENTINEL_KWARGS = {"password": "channels_valkey"}
 TEST_HOSTS = [
     {
