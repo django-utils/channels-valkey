@@ -1,7 +1,7 @@
 channels_valkey
 ===============
 
-.. image:: https://img.shields.io/pypi/v/channels_redis.svg
+.. image:: https://img.shields.io/pypi/v/channels_valkey.svg
     :target: https://pypi.python.org/pypi/channels_valkey
 
 Provides Django Channels channel layers that use Valkey as a backing store.
