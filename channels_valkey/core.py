@@ -10,13 +10,13 @@ import time
 import uuid
 
 import msgpack
-from redis import asyncio as aioredis
+from valkey import asyncio as aiovalkey
 
 from channels.exceptions import ChannelFull
 from channels.layers import BaseChannelLayer
 
 from .utils import (
-    _close_redis,
+    _close_valkey,
     _consistent_hash,
     _wrap_close,
     create_pool,
@@ -75,7 +75,7 @@ class BoundedQueue(asyncio.Queue):
         return super(BoundedQueue, self).put_nowait(item)
 
 
-class RedisLoopLayer:
+class ValkeyLoopLayer:
     def __init__(self, channel_layer):
         self._lock = asyncio.Lock()
         self.channel_layer = channel_layer
@@ -84,7 +84,7 @@ class RedisLoopLayer:
     def get_connection(self, index):
         if index not in self._connections:
             pool = self.channel_layer.create_pool(index)
-            self._connections[index] = aioredis.Redis(connection_pool=pool)
+            self._connections[index] = aiovalkey.Valkey(connection_pool=pool)
 
         return self._connections[index]
 
@@ -92,15 +92,15 @@ class RedisLoopLayer:
         async with self._lock:
             for index in list(self._connections):
                 connection = self._connections.pop(index)
-                await _close_redis(connection)
+                await _close_valkey(connection)
 
 
-class RedisChannelLayer(BaseChannelLayer):
+class ValkeyChannelLayer(BaseChannelLayer):
     """
-    Redis channel layer.
+    Valkey channel layer.
 
-    It routes all messages into remote Redis server. Support for
-    sharding among different Redis installations and message
+    It routes all messages into remote Valkey server. Support for
+    sharding among different Valkey installations and message
     encryption are provided.
     """
 
@@ -126,7 +126,7 @@ class RedisChannelLayer(BaseChannelLayer):
         # Configure the host objects
         self.hosts = decode_hosts(hosts)
         self.ring_size = len(self.hosts)
-        # Cached redis connection pools and the event loop they are from
+        # Cached valkey connection pools and the event loop they are from
         self._layers = {}
         # Normal channels choose a host index by cycling through the available hosts
         self._receive_index_generator = itertools.cycle(range(len(self.hosts)))
@@ -224,18 +224,18 @@ class RedisChannelLayer(BaseChannelLayer):
 
     async def _brpop_with_clean(self, index, channel, timeout):
         """
-        Perform a Redis BRPOP and manage the backup processing queue.
+        Perform a Valkey BRPOP and manage the backup processing queue.
         In case of cancellation, make sure the message is not lost.
         """
         # The script will pop messages from the processing queue and push them in front
         # of the main message queue in the proper order; BRPOP must *not* be called
         # because that would deadlock the server
         cleanup_script = """
-            local backed_up = redis.call('ZRANGE', ARGV[2], 0, -1, 'WITHSCORES')
+            local backed_up = server.call('ZRANGE', ARGV[2], 0, -1, 'WITHSCORES')
             for i = #backed_up, 1, -2 do
-                redis.call('ZADD', ARGV[1], backed_up[i], backed_up[i - 1])
+                server.call('ZADD', ARGV[1], backed_up[i], backed_up[i - 1])
             end
-            redis.call('DEL', ARGV[2])
+            server.call('DEL', ARGV[2])
         """
         backup_queue = self._backup_channel_name(channel)
         connection = self.connection(index)
@@ -459,9 +459,9 @@ class RedisChannelLayer(BaseChannelLayer):
 
         # Lua deletion script
         delete_prefix = """
-            local keys = redis.call('keys', ARGV[1])
+            local keys = server.call('keys', ARGV[1])
             for i=1,#keys,5000 do
-                redis.call('del', unpack(keys, i, math.min(i+4999, #keys)))
+                server.call('del', unpack(keys, i, math.min(i+4999, #keys)))
             end
         """
         # Go through each connection and remove all with prefix
@@ -538,10 +538,10 @@ class RedisChannelLayer(BaseChannelLayer):
             channel_keys_to_capacity,
         ) = self._map_channel_keys_to_connection(channel_names, message)
 
-        for connection_index, channel_redis_keys in connection_to_channel_keys.items():
+        for connection_index, channel_valkey_keys in connection_to_channel_keys.items():
             # Discard old messages based on expiry
             pipe = connection.pipeline()
-            for key in channel_redis_keys:
+            for key in channel_valkey_keys:
                 pipe.zremrangebyscore(
                     key, min=0, max=int(time.time()) - int(self.expiry)
                 )
@@ -557,9 +557,9 @@ class RedisChannelLayer(BaseChannelLayer):
                 local current_time = ARGV[#ARGV - 1]
                 local expiry = ARGV[#ARGV]
                 for i=1,#KEYS do
-                    if redis.call('ZCOUNT', KEYS[i], '-inf', '+inf') < tonumber(ARGV[i + #KEYS]) then
-                        redis.call('ZADD', KEYS[i], current_time, ARGV[i])
-                        redis.call('EXPIRE', KEYS[i], expiry)
+                    if server.call('ZCOUNT', KEYS[i], '-inf', '+inf') < tonumber(ARGV[i + #KEYS]) then
+                        server.call('ZADD', KEYS[i], current_time, ARGV[i])
+                        server.call('EXPIRE', KEYS[i], expiry)
                     else
                         over_capacity = over_capacity + 1
                     end
@@ -570,21 +570,21 @@ class RedisChannelLayer(BaseChannelLayer):
             # We need to filter the messages to keep those related to the connection
             args = [
                 channel_keys_to_message[channel_key]
-                for channel_key in channel_redis_keys
+                for channel_key in channel_valkey_keys
             ]
 
             # We need to send the capacity for each channel
             args += [
                 channel_keys_to_capacity[channel_key]
-                for channel_key in channel_redis_keys
+                for channel_key in channel_valkey_keys
             ]
 
             args += [time.time(), self.expiry]
 
-            # channel_keys does not contain a single redis key more than once
+            # channel_keys does not contain a single valkey key more than once
             connection = self.connection(connection_index)
             channels_over_capacity = await connection.eval(
-                group_send_lua, len(channel_redis_keys), *channel_redis_keys, *args
+                group_send_lua, len(channel_valkey_keys), *channel_valkey_keys, *args
             )
             if channels_over_capacity > 0:
                 logger.info(
@@ -598,17 +598,17 @@ class RedisChannelLayer(BaseChannelLayer):
         """
         For a list of channel names, GET
 
-        1. list of their redis keys bucket each one to a dict keyed by the connection index
+        1. list of their valkey keys bucket each one to a dict keyed by the connection index
 
-        2. for each unique channel redis key create a serialized message specific to that redis key, by adding
-           the list of channels mapped to that redis key in __asgi_channel__ key to the message
+        2. for each unique channel valkey key create a serialized message specific to that valkey key, by adding
+           the list of channels mapped to that valkey key in __asgi_channel__ key to the message
 
-        3. returns a mapping of redis channels keys to their capacity
+        3. returns a mapping of valkey channels keys to their capacity
         """
 
-        # Connection dict keyed by index to list of redis keys mapped on that index
+        # Connection dict keyed by index to list of valkey keys mapped on that index
         connection_to_channel_keys = collections.defaultdict(list)
-        # Message dict maps redis key to the message that needs to be send on that key
+        # Message dict maps valkey key to the message that needs to be sent on that key
         channel_key_to_message = dict()
         # Channel key mapped to its capacity
         channel_key_to_capacity = dict()
@@ -618,9 +618,9 @@ class RedisChannelLayer(BaseChannelLayer):
             channel_non_local_name = channel
             if "!" in channel:
                 channel_non_local_name = self.non_local_name(channel)
-            # Get its redis key
+            # Get its valkey key
             channel_key = self.prefix + channel_non_local_name
-            # Have we come across the same redis key?
+            # Have we come across the same valkey key?
             if channel_key not in channel_key_to_message:
                 # If not, fill the corresponding dicts
                 message = dict(message.items())
@@ -633,9 +633,9 @@ class RedisChannelLayer(BaseChannelLayer):
                 # Yes, Append the channel in message dict
                 channel_key_to_message[channel_key]["__asgi_channel__"].append(channel)
 
-        # Now that we know what message needs to be send on a redis key we serialize it
+        # Now that we know what message needs to be sent on a valkey key we serialize it
         for key, value in channel_key_to_message.items():
-            # Serialize the message stored for each redis key
+            # Serialize the message stored for each valkey key
             channel_key_to_message[key] = self.serialize(value)
 
         return (
@@ -712,6 +712,6 @@ class RedisChannelLayer(BaseChannelLayer):
             layer = self._layers[loop]
         except KeyError:
             _wrap_close(self, loop)
-            layer = self._layers[loop] = RedisLoopLayer(self)
+            layer = self._layers[loop] = ValkeyLoopLayer(self)
 
         return layer.get_connection(index)
