@@ -10,3 +10,5 @@ build/
 .idea
 uv.lock
 .python-version
+*.sh
+*.rdb
