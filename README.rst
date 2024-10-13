@@ -265,7 +265,6 @@ You can run the necessary Valkey instances in Docker with the following commands
         --network valkey-network \
         --name valkey-sentinel \
         -e VALKEY_MASTER_HOST=valkey-server \
-        -e VALKEY_MASTER_SET=sentinel \
         -e VALKEY_SENTINEL_QUORUM=1 \
         -p 26379:26379 \
         bitnami/valkey-sentinel
