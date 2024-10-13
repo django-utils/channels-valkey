@@ -13,6 +13,8 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/amirreza8002/channels-valkey"
+Source = "https://github.com/amirreza8002/channels-valkey"
+Issues = "https://github.com/amirreza8002/channels-valkey/issues"
 
 [project.optional-dependencies]
 cryptography = [
@@ -35,7 +37,7 @@ dev-dependencies = [
 asyncio_mode = "auto"
 addopts = "-p no:django"
 testpaths = "tests"
-timeout = 10
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401", "F403"]
