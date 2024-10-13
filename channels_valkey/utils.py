@@ -89,7 +89,7 @@ def create_pool(host):
         return aioredis.sentinel.SentinelConnectionPool(
             master_name,
             aioredis.sentinel.Sentinel(sentinels, sentinel_kwargs=sentinel_kwargs),
-            **host
+            **host,
         )
 
     return aioredis.ConnectionPool(**host)

@@ -1,26 +1,25 @@
-channels_redis
+channels_valkey
 ==============
 
-.. image:: https://github.com/django/channels_redis/workflows/Tests/badge.svg
-    :target: https://github.com/django/channels_redis/actions?query=workflow%3ATests
-
 .. image:: https://img.shields.io/pypi/v/channels_redis.svg
-    :target: https://pypi.python.org/pypi/channels_redis
+    :target: https://pypi.python.org/pypi/channels_valkey
 
-Provides Django Channels channel layers that use Redis as a backing store.
+Provides Django Channels channel layers that use Valkey as a backing store.
+
+this is a fork of the wonderful ``channels-redis`` project.
 
 There are two available implementations:
 
-* ``RedisChannelLayer`` is the original layer, and implements channel and group
+* ``ValkeyChannelLayer`` is the original layer, and implements channel and group
   handling itself.
-* ``RedisPubSubChannelLayer`` is newer and leverages Redis Pub/Sub for message
+* ``ValkeyPubSubChannelLayer`` is newer and leverages Valkey Pub/Sub for message
   dispatch. This layer is currently at *Beta* status, meaning it may be subject
   to breaking changes whilst it matures.
 
 Both layers support a single-server and sharded configurations.
 
-`channels_redis` is tested against Python 3.8 to 3.12, `redis-py` versions 4.6,
-5.0, and the development branch, and Channels versions 3, 4 and the development
+`channels_valkey` is tested against Python 3.9 to 3.13, `valkey-py` versions 6.x,
+and the development branch, and Channels versions 3, 4 and the development
 branch there.
 
 Installation
@@ -28,12 +27,7 @@ Installation
 
 .. code-block::
 
-    pip install channels-redis
-
-**Note:** Prior versions of this package were called ``asgi_redis`` and are
-still available under PyPI as that name if you need them for Channels 1.x projects.
-This package is for Channels 2 projects only.
-
+    pip install channels-valkey
 
 Usage
 -----
@@ -44,20 +38,20 @@ Set up the channel layer in your Django settings file like so:
 
     CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "BACKEND": "channels_valkey.core.ValkeyChannelLayer",
             "CONFIG": {
                 "hosts": [("localhost", 6379)],
             },
         },
     }
 
-Or, you can use the alternate implementation which uses Redis Pub/Sub:
+Or, you can use the alternate implementation which uses Valkey Pub/Sub:
 
 .. code-block:: python
 
     CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+            "BACKEND": "channels_valkey.pubsub.ValkeyPubSubChannelLayer",
             "CONFIG": {
                 "hosts": [("localhost", 6379)],
             },
@@ -69,8 +63,8 @@ Possible options for ``CONFIG`` are listed below.
 ``hosts``
 ~~~~~~~~~
 
-The server(s) to connect to, as either URIs, ``(host, port)`` tuples, or dicts conforming to `redis Connection <https://redis-py.readthedocs.io/en/stable/connections.html#async-client>`_.
-Defaults to ``redis://localhost:6379``. Pass multiple hosts to enable sharding,
+The server(s) to connect to, as either URIs, ``(host, port)`` tuples, or dicts conforming to `valkey Connection <https://valkey-py.readthedocs.io/en/stable/connections.html#async-client>`_.
+Defaults to ``valkey://localhost:6379``. Pass multiple hosts to enable sharding,
 but note that changing the host list will lose some sharded data.
 
 SSL connections that are self-signed (ex: Heroku):
@@ -78,10 +72,10 @@ SSL connections that are self-signed (ex: Heroku):
 .. code-block:: python
 
     "default": {
-        "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+        "BACKEND": "channels_valkey.pubsub.ValkeyPubSubChannelLayer",
         "CONFIG": {
             "hosts":[{
-                "address": "rediss://user@host:port",  # "REDIS_TLS_URL"
+                "address": "valkeys://user@host:port",  # "VALKEY_TLS_URL"
                 "ssl_cert_reqs": None,
             }]
         }
@@ -89,7 +83,7 @@ SSL connections that are self-signed (ex: Heroku):
 
 Sentinel connections require dicts conforming to:
 
-.. code-block::
+.. code-block:: python
 
     {
         "sentinels": [
@@ -99,17 +93,17 @@ Sentinel connections require dicts conforming to:
         **kwargs
     }
 
-note the additional ``master_name`` key specifying the Sentinel master set and any additional connection kwargs can also be passed. Plain Redis and Sentinel connections can be mixed and matched if
+note the additional ``master_name`` key specifying the Sentinel master set and any additional connection kwargs can also be passed. Plain Valkey and Sentinel connections can be mixed and matched if
 sharding.
 
-If your server is listening on a UNIX domain socket, you can also use that to connect: ``["unix:///path/to/redis.sock"]``.
+If your server is listening on a UNIX domain socket, you can also use that to connect: ``["unix:///path/to/valkey.sock"]``.
 This should be slightly faster than a loopback TCP connection.
 
 ``prefix``
 ~~~~~~~~~~
 
-Prefix to add to all Redis keys. Defaults to ``asgi``. If you're running
-two or more entirely separate channel layers through the same Redis instance,
+Prefix to add to all Valkey keys. Defaults to ``asgi``. If you're running
+two or more entirely separate channel layers through the same Valkey instance,
 make sure they have different prefixes. All servers talking to the same layer
 should have the same prefix, though.
 
@@ -146,7 +140,7 @@ Per-channel capacity configuration. This lets you tweak the channel capacity
 based on the channel name, and supports both globbing and regular expressions.
 
 It should be a dict mapping channel name pattern to desired capacity; if the
-dict key is a string, it's intepreted as a glob, while if it's a compiled
+dict key is a string, it's interpreted as a glob, while if it's a compiled
 ``re`` object, it's treated as a regular expression.
 
 This example sets ``http.request`` to 200, all ``http.response!`` channels
@@ -156,7 +150,7 @@ to 10, and all ``websocket.send!`` channels to 20:
 
     CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "BACKEND": "channels_valkey.core.ValkeyChannelLayer",
             "CONFIG": {
                 "hosts": [("localhost", 6379)],
                 "channel_capacity": {
@@ -176,9 +170,9 @@ argument; channels will then be matched in the order the dict provides them.
 
 Pass this to enable the optional symmetric encryption mode of the backend. To
 use it, make sure you have the ``cryptography`` package installed, or specify
-the ``cryptography`` extra when you install ``channels-redis``::
+the ``cryptography`` extra when you install ``channels-valkey``::
 
-    pip install channels-redis[cryptography]
+    pip install channels-valkey[cryptography]
 
 ``symmetric_encryption_keys`` should be a list of strings, with each string
 being an encryption key. The first key is always used for encryption; all are
@@ -186,8 +180,8 @@ considered for decryption, so you can rotate keys without downtime - just add
 a new key at the start and move the old one down, then remove the old one
 after the message expiry time has passed.
 
-Data is encrypted both on the wire and at rest in Redis, though we advise
-you also route your Redis connections over TLS for higher security; the Redis
+Data is encrypted both on the wire and at rest in Valkey, though we advise
+you also route your Valkey connections over TLS for higher security; the Valkey
 protocol is still unencrypted, and the channel and group key names could
 potentially contain metadata patterns of use to attackers.
 
@@ -202,9 +196,9 @@ If you're using Django, you may also wish to set this to your site's
 
     CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "BACKEND": "channels_valkey.core.ValkeyChannelLayer",
             "CONFIG": {
-                "hosts": ["redis://:password@127.0.0.1:6379/0"],
+                "hosts": ["valkey://:password@127.0.0.1:6379/0"],
                 "symmetric_encryption_keys": [SECRET_KEY],
             },
         },
@@ -213,18 +207,18 @@ If you're using Django, you may also wish to set this to your site's
 ``on_disconnect`` / ``on_reconnect``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The PubSub layer, which maintains long-running connections to Redis, can drop messages in the event of a network partition.
-To handle such situations the PubSub layer accepts optional arguments which will notify consumers of Redis disconnect/reconnect events.
+The PubSub layer, which maintains long-running connections to Valkey, can drop messages in the event of a network partition.
+To handle such situations the PubSub layer accepts optional arguments which will notify consumers of Valkey disconnect/reconnect events.
 A common use-case is for consumers to ensure that they perform a full state re-sync to ensure that no messages have been missed.
 
 .. code-block:: python
 
     CHANNEL_LAYERS = {
         "default": {
-            "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+            "BACKEND": "channels_valkey.pubsub.ValkeyPubSubChannelLayer",
             "CONFIG": {
                 "hosts": [...],
-                "on_disconnect": "redis.disconnect",
+                "on_disconnect": "valkey.disconnect",
             },
         },
     }
@@ -234,63 +228,58 @@ And then in your channels consumer, you can implement the handler:
 
 .. code-block:: python
 
-    async def redis_disconnect(self, *args):
+    async def valkey_disconnect(self, *args):
         # Handle disconnect
 
 Dependencies
 ------------
 
-Redis server >= 5.0 is required for `channels-redis`. Python 3.8 or higher is required.
+Valkey server >= 7.2.7 is required for `channels-valkey`. Python 3.9 or higher is required.
 
 
 Used commands
 ~~~~~~~~~~~~~
 
-Your Redis server must support the following commands:
+Your Valkey server must support the following commands:
 
-* ``RedisChannelLayer`` uses ``BZPOPMIN``, ``DEL``, ``EVAL``, ``EXPIRE``,
+* ``ValkeyChannelLayer`` uses ``BZPOPMIN``, ``DEL``, ``EVAL``, ``EXPIRE``,
   ``KEYS``, ``PIPELINE``, ``ZADD``, ``ZCOUNT``, ``ZPOPMIN``, ``ZRANGE``,
   ``ZREM``, ``ZREMRANGEBYSCORE``
 
-* ``RedisPubSubChannelLayer`` uses ``PUBLISH``, ``SUBSCRIBE``, ``UNSUBSCRIBE``
+* ``ValkeyPubSubChannelLayer`` uses ``PUBLISH``, ``SUBSCRIBE``, ``UNSUBSCRIBE``
 
 Local Development
 -----------------
 
-You can run the necessary Redis instances in Docker with the following commands:
+You can run the necessary Valkey instances in Docker with the following commands:
 
 .. code-block:: shell
 
-    $ docker network create redis-network
+    $ docker network create valkey-network
     $ docker run --rm \
-        --network=redis-network \
-        --name=redis-server \
+        --network=valkey-network \
+        --name=valkey-server \
         -p 6379:6379 \
-        redis
+        valkey/valkey
     $ docker run --rm \
-        --network redis-network \
-        --name redis-sentinel \
-        -e REDIS_MASTER_HOST=redis-server \
-        -e REDIS_MASTER_SET=sentinel \
-        -e REDIS_SENTINEL_QUORUM=1 \
+        --network valkey-network \
+        --name valkey-sentinel \
+        -e VALKEY_MASTER_HOST=valkey-server \
+        -e VALKEY_MASTER_SET=sentinel \
+        -e VALKEY_SENTINEL_QUORUM=1 \
         -p 26379:26379 \
-        bitnami/redis-sentinel
+        bitnami/valkey-sentinel
 
 Contributing
 ------------
+
+this project is a fork of ``channels_redis`` project, it's mostly the same setup, only replace ``redis`` with ``valkey``.
 
 Please refer to the
 `main Channels contributing docs <https://github.com/django/channels/blob/master/CONTRIBUTING.rst>`_.
 That also contains advice on how to set up the development environment and run the tests.
 
-Maintenance and Security
-------------------------
-
-To report security issues, please contact security@djangoproject.com. For GPG
-signatures and more security process information, see
-https://docs.djangoproject.com/en/dev/internals/security/.
+Maintenance
+-----------
 
 To report bugs or request new features, please open a new GitHub issue.
-
-This repository is part of the Channels project. For the shepherd and maintenance team, please see the
-`main Channels readme <https://github.com/django/channels/blob/master/README.rst>`_.

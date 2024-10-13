@@ -1,3 +1,10 @@
+0.1.0
+-----
+
+* package forked from channels_redis and switched to work as a valkey backend
+
+channels_redis:
+
 4.2.0 (2024-01-12)
 ------------------
 

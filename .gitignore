@@ -8,3 +8,5 @@ build/
 .pytest_cache
 .vscode
 .idea
+uv.lock
+.python-version

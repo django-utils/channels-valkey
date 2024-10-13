@@ -5,7 +5,7 @@ import async_timeout
 import pytest
 
 from asgiref.sync import async_to_sync
-from channels_redis.core import ChannelFull, RedisChannelLayer
+from channels_valkey.core import ChannelFull, RedisChannelLayer
 
 TEST_HOSTS = ["redis://localhost:6379"]
 

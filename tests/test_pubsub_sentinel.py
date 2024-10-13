@@ -5,8 +5,8 @@ import async_timeout
 import pytest
 
 from asgiref.sync import async_to_sync
-from channels_redis.pubsub import RedisPubSubChannelLayer
-from channels_redis.utils import _close_redis
+from channels_valkey.pubsub import RedisPubSubChannelLayer
+from channels_valkey.utils import _close_redis
 
 SENTINEL_MASTER = "sentinel"
 SENTINEL_KWARGS = {"password": "channels_redis"}

@@ -1,6 +1,6 @@
 import pytest
 
-from channels_redis.utils import _consistent_hash
+from channels_valkey.utils import _consistent_hash
 
 
 @pytest.mark.parametrize(
