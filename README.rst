@@ -1,5 +1,5 @@
 channels_valkey
-==============
+===============
 
 .. image:: https://img.shields.io/pypi/v/channels_redis.svg
     :target: https://pypi.python.org/pypi/channels_valkey
@@ -255,13 +255,13 @@ You can run the necessary Valkey instances in Docker with the following commands
 
 .. code-block:: shell
 
-    $ docker network create valkey-network
-    $ docker run --rm \
+    docker network create valkey-network
+    docker run --rm \
         --network=valkey-network \
         --name=valkey-server \
         -p 6379:6379 \
         valkey/valkey
-    $ docker run --rm \
+    docker run --rm \
         --network valkey-network \
         --name valkey-sentinel \
         -e VALKEY_MASTER_HOST=valkey-server \
