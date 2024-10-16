@@ -3,9 +3,9 @@ import functools
 import logging
 import uuid
 
-import msgpack
 from valkey import asyncio as aiovalkey
 
+from .serializers import registry
 from .utils import (
     _close_valkey,
     _consistent_hash,
@@ -25,10 +25,20 @@ async def _async_proxy(obj, name, *args, **kwargs):
 
 
 class ValkeyPubSubChannelLayer:
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        symmetric_encryption_keys=None,
+        serializer_format="msgpack",
+        **kwargs,
+    ) -> None:
         self._args = args
         self._kwargs = kwargs
         self._layers = {}
+        # seialization
+        self._serializer = registry.get_serializer(
+            serializer_format, symmetric_encryption_keys=symmetric_encryption_keys
+        )
 
     def __getattr__(self, name):
         if name in (
@@ -48,13 +58,13 @@ class ValkeyPubSubChannelLayer:
         """
         Serializes message to a byte string.
         """
-        return msgpack.packb(message)
+        return self._serializer.serialize(message)
 
     def deserialize(self, message):
         """
         Deserializes from a byte string.
         """
-        return msgpack.unpackb(message)
+        return self._serializer.deserialize(message)
 
     def _get_layer(self):
         loop = asyncio.get_running_loop()
