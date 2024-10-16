@@ -174,6 +174,7 @@ the ``cryptography`` extra when you install ``channels-valkey``::
 
     pip install channels-valkey[cryptography]
 
+.. _encryption
 ``symmetric_encryption_keys`` should be a list of strings, with each string
 being an encryption key. The first key is always used for encryption; all are
 considered for decryption, so you can rotate keys without downtime - just add
@@ -236,6 +237,52 @@ Dependencies
 
 Valkey server >= 7.2.7 is required for `channels-valkey`. Python 3.9 or higher is required.
 
+``serializer_format``
+~~~~~~~~~~~~~~~~~~~~~
+
+bt default every message sent to valkey is encoded using `msgpack <https://msgpack.org/>`_ (msgpack is a mandatory dependency of this package).
+It is also possible to switch to `JSON <https://www.json.org/>`_:
+
+.. code-block:: python
+
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_valkey.core.ValkeyChannelLayer",
+            "CONFIG": {
+                "hosts": ["valkey://:password@127.0.0.1:6379/0"],
+                "serializer_format": "json",
+            },
+        },
+    }
+
+also Custom serializers can be defined by:
+- extending ``channels_valkey.serializers.BaseMessageSerializer``, implementing ``as_bytes `` and ``from_bytes`` methods.
+- using any class which accepts generic keyword arguments and provides ``serialize``/``deserialize`` methods
+
+Then it may be registered (or can be overriden) by using ``channels_valkey.serializers.registry``:
+
+.. code-block:: python
+
+    from channels_valkey.serializers import registry
+
+    class MyFormatSerializer:
+        def serialize(self, message):
+            ...
+
+        def deserializer(self, message):
+            ...
+
+
+    registry.register_serializer("myformat", MyFormatSerializer)
+
+
+**NOTE**: the registry allows you to override the serializer class used for a specific format without any check nor constraint.
+Thus it is recommended that to pay particular attention to the order-of-imports when using third-party serializers which may override a built-in format.
+
+Serializers are also responsible for encryption using *symmetric_encryption_keys*.
+When extending ``channels_valkey.serializers.BaseMessageSerializer`` encryption is already configured in the base class,
+unless you override the ``serialize``/``deserialize`` methods: in this case you should call ``self.crypter.encrypt`` in serialization and ``self.crypter.decrypt`` in deserialization process.
+When using a fully custom serializer, expect an optional sequence of keys to be passed via ``symmetric_encryption_keys``.
 
 Used commands
 ~~~~~~~~~~~~~
