@@ -320,6 +320,8 @@ Contributing
 
 this project is a fork of ``channels_redis`` project, it's mostly the same setup, only replace ``redis`` with ``valkey``.
 
+**Note**: this package is meant to be an exact mimic of ``channels_redis``, if you need a new feature, please ask them, if accepted, it'll be added here as well.
+
 Please refer to the
 `main Channels contributing docs <https://github.com/django/channels/blob/master/CONTRIBUTING.rst>`_.
 That also contains advice on how to set up the development environment and run the tests.

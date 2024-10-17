@@ -1,14 +1,9 @@
-Issues are for **concrete, actionable bugs and feature requests** only - if you're just asking for debugging help or technical support we have to direct you elsewhere. If you just have questions or support requests please use:
+This package is meant to be an exact mimic of `channels_redis` package, if you need a new feature, please open an issue there, and if accepted I'll add it here as well.
 
-- Stack Overflow
-- The Django Users mailing list django-users@googlegroups.com (https://groups.google.com/forum/#!forum/django-users)
+if you want to issue a bug report, please inform us of the following info:
 
-We have to limit this because of limited volunteer time to respond to issues!
-
-Please also try and include, if you can:
-
-- Your OS and runtime environment, and browser if applicable
-- A `pip freeze` output showing your package versions
-- What you expected to happen vs. what actually happened
-- How you're running Channels (runserver? daphne/runworker? Nginx/Apache in front?)
+- Your OS and runtime environment, and browser if applicable.
+- the package's exact version.
+- What you expect to happen vs. what actually happens.
+- How you're running Channels (runserver? daphne/runworker? Nginx/Apache in front?).
 - Console logs and full tracebacks of any errors
