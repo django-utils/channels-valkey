@@ -42,6 +42,7 @@ jobs:
         env:
           VALKEY_SENTINEL_QUORUM: "1"
           VALKEY_SENTINEL_PASSWORD: channels_valkey
+          VALKEY_PRIMAY_SET: "mymaster"
 
     steps:
       - uses: actions/checkout@v4
