@@ -1,6 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "channels-valkey"
-version = "0.2.0"
+version = "0.2.0.post1"
 description = "Valkey-backed ASGI channel layer implementation"
 readme = "README.rst"
 requires-python = ">=3.9"
@@ -12,9 +16,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/amirreza8002/channels-valkey"
-Source = "https://github.com/amirreza8002/channels-valkey"
-Issues = "https://github.com/amirreza8002/channels-valkey/issues"
+Homepage = "https://github.com/django-utils/channels-valkey"
+Source = "https://github.com/django-utils/channels-valkey"
+Issues = "https://github.com/django-utils/channels-valkey/issues"
 
 [project.optional-dependencies]
 cryptography = [
