@@ -7,7 +7,7 @@ import pytest
 from asgiref.sync import async_to_sync
 from channels_valkey.core import ChannelFull, ValkeyChannelLayer
 
-SENTINEL_MASTER = "mymaster"
+SENTINEL_MASTER = "myprimary"
 SENTINEL_KWARGS = {"password": "channels_valkey"}
 
 TEST_HOSTS = [
