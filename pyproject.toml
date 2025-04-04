@@ -2,9 +2,14 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+exclude = [
+    "tests/"
+]
+
 [project]
 name = "channels-valkey"
-version = "0.2.0.post1"
+version = "0.2.0.post2"
 description = "Valkey-backed ASGI channel layer implementation"
 readme = "README.rst"
 requires-python = ">=3.9"
