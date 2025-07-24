@@ -1,3 +1,23 @@
+0.3.0
+-----
+
+* Updated Channels dependency to at least v4.2.2.
+* Updated asgiref dependency to at least v3.9.1.
+* Fixed compatibility with latest versions of pytest-asyncio.
+* Renamed internal methods in core channel layer for compatibility with
+  Channels v4.2.1+
+* Dropped testing against legacy Channels v3 branch.
+
+* Updated testing against latest valkey-py versions.
+* drop black in favor of `ruff format`
+
+0.2.0
+-----
+
+* allow registering serializers
+* add json serializer
+
+
 0.1.0
 -----
 
