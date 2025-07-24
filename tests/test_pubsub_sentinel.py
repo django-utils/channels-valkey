@@ -42,8 +42,8 @@ async def test_send_receive(channel_layer):
     assert message["text"] == "Ahoy-hoy!"
 
 
-def test_send_receive_sync(channel_layer, event_loop):
-    _await = event_loop.run_until_complete
+def test_send_receive_sync(channel_layer, asyncio_event_loop):
+    _await = asyncio_event_loop.run_until_complete
     channel = _await(channel_layer.new_channel())
     async_to_sync(channel_layer.send, force_new_loop=True)(
         channel, {"type": "test.message", "text": "Ahoy-hoy!"}
@@ -67,8 +67,8 @@ async def test_multi_send_receive(channel_layer):
     assert (await channel_layer.receive(channel))["type"] == "message.3"
 
 
-def test_multi_send_receive_sync(channel_layer, event_loop):
-    _await = event_loop.run_until_complete
+def test_multi_send_receive_sync(channel_layer, asyncio_event_loop):
+    _await = asyncio_event_loop.run_until_complete
     channel = _await(channel_layer.new_channel())
     send = async_to_sync(channel_layer.send)
     send(channel, {"type": "message.1"})
