@@ -14,8 +14,8 @@ description = "Valkey-backed ASGI channel layer implementation"
 readme = "README.rst"
 requires-python = ">=3.9"
 dependencies = [
-    "asgiref>=3.2.10",
-    "channels>=4.1.0",
+    "asgiref>=3.9.1",
+    "channels>=4.2.2",
     "msgpack>=1.1.0",
     "valkey>=6.0.0",
 ]
@@ -32,13 +32,12 @@ cryptography = [
 
 [tool.uv]
 dev-dependencies = [
-    "async-timeout>=4.0.3",
-    "black>=24.10.0",
+    "async-timeout>=5.0.1",
     "coverage>=7.6.2",
-    "pre-commit>=4.0.1",
-    "pytest>=8.3.3",
+    "pre-commit>=4.2.0",
+    "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
-    "ruff>=0.6.9",
+    "ruff>=0.12.4",
     "tox>=4.21.2",
 ]
 

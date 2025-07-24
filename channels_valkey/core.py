@@ -168,7 +168,7 @@ class ValkeyChannelLayer(BaseChannelLayer):
         """
         # Typecheck
         assert isinstance(message, dict), "message is not a dict"
-        assert self.valid_channel_name(channel), "Channel name not valid"
+        assert self.require_valid_channel_name(channel), "Channel name not valid"
         # Make sure the message does not contain reserved keys
         assert "__asgi_channel__" not in message
         # If it's a process-local channel, strip off local part and stick full name in message
@@ -255,12 +255,12 @@ class ValkeyChannelLayer(BaseChannelLayer):
         """
         # Make sure the channel name is valid then get the non-local part
         # and thus its index
-        assert self.valid_channel_name(channel)
+        assert self.require_valid_channel_name(channel)
         if "!" in channel:
             real_channel = self.non_local_name(channel)
-            assert real_channel.endswith(
-                self.client_prefix + "!"
-            ), "Wrong client prefix"
+            assert real_channel.endswith(self.client_prefix + "!"), (
+                "Wrong client prefix"
+            )
             # Enter receiving section
             loop = asyncio.get_running_loop()
             self.receive_count += 1
@@ -376,7 +376,9 @@ class ValkeyChannelLayer(BaseChannelLayer):
         Receives a single message off of the channel and returns it.
         """
         # Check channel name
-        assert self.valid_channel_name(channel, receive=True), "Channel name invalid"
+        assert self.require_valid_channel_name(channel, receive=True), (
+            "Channel name invalid"
+        )
         # Work out the connection to use
         if "!" in channel:
             assert channel.endswith("!")
@@ -481,8 +483,8 @@ class ValkeyChannelLayer(BaseChannelLayer):
         Adds the channel name to a group.
         """
         # Check the inputs
-        assert self.valid_group_name(group), "Group name not valid"
-        assert self.valid_channel_name(channel), "Channel name not valid"
+        assert self.require_valid_group_name(group), "Group name not valid"
+        assert self.require_valid_channel_name(channel), "Channel name not valid"
         # Get a connection to the right shard
         group_key = self._group_key(group)
         connection = self.connection(self.consistent_hash(group))
@@ -507,7 +509,7 @@ class ValkeyChannelLayer(BaseChannelLayer):
         """
         Sends a message to the entire group.
         """
-        assert self.valid_group_name(group), "Group name not valid"
+        assert self.require_valid_group_name(group), "Group name not valid"
         # Retrieve list of all channel names
         key = self._group_key(group)
         connection = self.connection(self.consistent_hash(group))
