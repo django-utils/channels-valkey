@@ -32,7 +32,6 @@ cryptography = [
 
 [tool.uv]
 dev-dependencies = [
-    "black>=24.10.0",
     "async-timeout>=5.0.1",
     "coverage>=7.6.2",
     "pre-commit>=4.2.0",
